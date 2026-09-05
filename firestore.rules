@@ -1,0 +1,52 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // User authentication check
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    // User is the owner/operator
+    function isOwner() {
+      return request.auth.uid == resource.data.ownerId || request.auth.email == 'kt@isuae.com';
+    }
+
+    // Inquiry collection - quotes awaiting processing
+    match /inquiries/{inquiryId} {
+      allow read, write: if isAuthenticated() && isOwner();
+    }
+
+    // Quote collection - generated quotes awaiting approval
+    match /quotes/{quoteId} {
+      allow read, write: if isAuthenticated() && isOwner();
+
+      // Approval status tracking
+      match /approvals/{approvalId} {
+        allow read, write: if isAuthenticated() && isOwner();
+      }
+    }
+
+    // Agent interaction logs - audit trail
+    match /agentInteractionLog/{logId} {
+      allow read: if isAuthenticated() && isOwner();
+      allow write: if isAuthenticated();
+    }
+
+    // Product specifications
+    match /products/{productId} {
+      allow read: if isAuthenticated() && isOwner();
+      allow write: if isAuthenticated() && isOwner();
+    }
+
+    // Pricing and cost data
+    match /pricing/{pricingId} {
+      allow read: if isAuthenticated() && isOwner();
+      allow write: if isAuthenticated() && isOwner();
+    }
+
+    // Deny all by default
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
